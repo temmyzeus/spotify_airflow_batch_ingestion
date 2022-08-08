@@ -85,3 +85,24 @@ resource "aws_key_pair" "ec2_key_pair" {
   public_key = tls_private_key.airflow_ec2_key.public_key_openssh
   tags       = var.AIRFLOW_TAG
 }
+
+resource "aws_db_instance" "spotify_db" {
+  engine            = "postgres"
+  engine_version    = "14.2"
+  db_name           = "spotify_db"
+  availability_zone = var.AZ
+  identifier        = "spotify_db"
+  # settings
+  username = var.DATABASE_USERNAME
+  password = var.DATABASE_PASSWD
+  # instance config
+  instance_class = "db.t3.micro"
+  # storage
+  storage_type      = "gp2"
+  allocated_storage = 10
+  # storage autoscaling
+  max_allocated_storage = 15
+  tags = {
+    Project : "Spotify"
+  }
+}

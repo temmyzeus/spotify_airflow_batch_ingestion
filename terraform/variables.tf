@@ -45,3 +45,13 @@ variable "public_key_path" {
   type        = string
   description = "Path to public key"
 }
+
+variable "DATABASE_USERNAME" {
+  type        = string
+  description = "Username for database"
+}
+
+variable "DATABASE_PASSWD" {
+  type        = string
+  description = "Password for database"
+}

@@ -59,8 +59,11 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+    SPOTIFY_USERNAME: ${SPOTIFY_USERNAME}
+    SPOTIFY_PASSWORD: ${SPOTIFY_PASSWORD}
     SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID}
     SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET}
+    DISPLAY: ':0'
   volumes:
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs

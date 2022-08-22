@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS listens (
     track_id VARCHAR(23),
     artist_id VARCHAR(23),
     time_played TIMESTAMP,
-    play_duration_ms SMALLINT,
+    play_duration_ms INTEGER,
     CONSTRAINT fk_track_id FOREIGN KEY(track_id) REFERENCES tracks(id),
     CONSTRAINT fk_artist_id FOREIGN KEY(artist_id) REFERENCES artists(id)
 );

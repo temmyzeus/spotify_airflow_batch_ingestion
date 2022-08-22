@@ -279,5 +279,17 @@ services:
   #     airflow-init:
   #       condition: service_completed_successfully
 
+  selenium:
+    image: selenium/standalone-chrome
+    container_name: 'selenium-chrome'
+    ports:
+     - 4444:4444
+     - 7900:7900
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: '1gb'
+
 volumes:
   postgres-db-volume:

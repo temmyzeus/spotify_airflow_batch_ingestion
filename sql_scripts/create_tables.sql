@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS artists (
     id VARCHAR(23) NOT NULL,
     name VARCHAR(50) NOT NULL,
-    genre VARCHAR(50),
+    genre VARCHAR(500),
     followers INT NOT NULL,
     -- Spotify uses a popularity index 0-100
     popularity SMALLINT NOT NULL,

@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS artists (
 );
 CREATE TABLE IF NOT EXISTS tracks (
     id VARCHAR(23) NOT NULL,
-    name VARCHAR(50) NOT NULL,
+    name VARCHAR NOT NULL,
     artist_id VARCHAR(23) NOT NULL,
     duration_ms SMALLINT NOT NULL,
     popularity SMALLINT NOT NULL,

@@ -169,11 +169,15 @@ def fetch_spotify_data(ti) -> Any:
     print(listens_df)
 
 
-def upload_to_aws_rds():
+def insert_to_aws_rds_postgres(ti):
     """Task to upload to AWS RDS Database"""
-    rds_resource = boto3.resource("rds")
-    pass
+    postgres_hook = PostgresHook("aws_rds_postgres")
+    conn = postgres_hook.get_conn()
+    conn.set_session(autocommit=True)
+    cursor = conn.cursor()
 
+    cursor.close()
+    conn.close()
 
 default_args: Dict[str, str] = {"email": "awoyeletemiloluwa@gmail.com"}
 dag = DAG(
@@ -189,7 +193,7 @@ fetch_spotify_data = PythonOperator(
 )
 
 upload_to_aws_rds = PythonOperator(
-    task_id="Upload-to-AWS-Rds", python_callable=upload_to_aws_rds, dag=dag
+    task_id="Insert-to-AWS-RDS-Postgres", python_callable=insert_to_aws_rds_postgres, dag=dag
 )
 
 fetch_spotify_data >> upload_to_aws_rds

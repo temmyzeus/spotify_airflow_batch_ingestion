@@ -1,5 +1,6 @@
 import base64
 import os
+from traceback import print_tb
 import urllib.parse
 from collections import OrderedDict, defaultdict
 from datetime import datetime
@@ -98,7 +99,7 @@ def fetch_spotify_data(ti) -> Any:
     )
     recently_played = recently_played_response.json()
 
-    listens:defaultdict = defaultdict(list)
+    listens: defaultdict = defaultdict(list)
     artists: OrderedDict = OrderedDict(
         {
             "id": [],
@@ -140,7 +141,7 @@ def fetch_spotify_data(ti) -> Any:
             artists["id"].append(artist_id)
             artists["name"].append(artist["name"])
             artists["genre"].append(artist["genres"])
-            artists["followers"].append(artist["followers"])
+            artists["followers"].append(artist["followers"]["total"])
             artists["popularity"].append(artist["popularity"])
             artists["url"].append(artist["external_urls"]["spotify"])
 
@@ -176,8 +177,48 @@ def insert_to_aws_rds_postgres(ti):
     conn.set_session(autocommit=True)
     cursor = conn.cursor()
 
+    listens = ti.xcom_pull(task_ids="Fetch-Spotify-Data", key="listens")
+    artists = ti.xcom_pull(task_ids="Fetch-Spotify-Data", key="artists")
+    tracks = ti.xcom_pull(task_ids="Fetch-Spotify-Data", key="tracks")
+
+    for index in range(len(artists["id"])):
+        artist_values = tuple(
+            [
+                artists[key][index] if (key != "genre") else str(artists[key][index])
+                for key in artists.keys()
+            ]
+        )
+        print(artist_values)
+
+        cursor.execute(
+            """
+            INSERT INTO artists (id, name, genre, followers, popularity, url) VALUES (%s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING;
+            """,
+            vars=artist_values,
+        )
+
+    for index in range(len(tracks["id"])):
+        track_values = tuple([tracks[key][index] for key in tracks.keys()])
+
+        cursor.execute(
+            """
+            INSERT INTO tracks (id, name, artist_id, duration_ms, popularity, is_in_album, is_explicit, external_url) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING;
+            """,
+            vars=track_values,
+        )
+
+    for listen_values in zip(*listens.values()):
+        cursor.execute(
+            """
+            INSERT INTO listens (track_id, artist_id, time_played, play_duration_ms) VALUES (%s, %s, %s, %s);
+            """,
+            vars=listen_values,
+        )
+
     cursor.close()
     conn.close()
+
 
 default_args: Dict[str, str] = {"email": "awoyeletemiloluwa@gmail.com"}
 dag = DAG(
@@ -193,7 +234,9 @@ fetch_spotify_data = PythonOperator(
 )
 
 upload_to_aws_rds = PythonOperator(
-    task_id="Insert-to-AWS-RDS-Postgres", python_callable=insert_to_aws_rds_postgres, dag=dag
+    task_id="Insert-to-AWS-RDS-Postgres",
+    python_callable=insert_to_aws_rds_postgres,
+    dag=dag,
 )
 
 fetch_spotify_data >> upload_to_aws_rds

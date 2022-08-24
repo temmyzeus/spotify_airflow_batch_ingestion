@@ -93,6 +93,11 @@ def fetch_spotify_data(dag_date, ti) -> Any:
         ),
         "Content-Type": "application/json",
     }
+
+    dag_date = datetime.strptime(dag_date, "%Y-%m-%d")
+    dag_date_posix_seconds = int(dag_date.timestamp())
+    dag_date_posix_ms = int(dag_date_posix_seconds * 1000)
+
     recently_played_response = requests.get(
         "https://api.spotify.com/v1/me/player/recently-played", headers=headers
     )

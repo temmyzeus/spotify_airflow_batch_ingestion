@@ -98,8 +98,11 @@ def fetch_spotify_data(dag_date, ti) -> Any:
     dag_date_posix_seconds = int(dag_date.timestamp())
     dag_date_posix_ms = int(dag_date_posix_seconds * 1000)
 
+    query_params = {"before": dag_date_posix_ms, "limit": 50}
+    query_params = urllib.parse.urlencode(query_params)
     recently_played_response = requests.get(
-        "https://api.spotify.com/v1/me/player/recently-played", headers=headers
+        f"https://api.spotify.com/v1/me/player/recently-played?{query_params}",
+        headers=headers,
     )
     recently_played = recently_played_response.json()
 

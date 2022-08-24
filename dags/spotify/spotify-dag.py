@@ -12,6 +12,7 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.utils.dates import days_ago
+from dateutil import parser
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -106,6 +107,17 @@ def fetch_spotify_data(dag_date, ti) -> Any:
     )
     recently_played = recently_played_response.json()
 
+    next_url = recently_played[
+        "next"
+    ]  # would only be useful when the songs retrieved are more than the limit i.e 50, so you check the next set if there are stll some items remaining for the same date
+
+    # all items where 'played_at' datetime falls into another schedule interval's start time should be removed
+    recently_played = [
+        item
+        for item in recently_played["items"]
+        if parser.parse(item["played_at"]) < dag_date
+    ]
+
     listens: defaultdict = defaultdict(list)
     artists: OrderedDict = OrderedDict(
         {
@@ -130,7 +142,7 @@ def fetch_spotify_data(dag_date, ti) -> Any:
         }
     )
 
-    for n, item in enumerate(recently_played["items"]):
+    for n, item in enumerate(recently_played):
         artist_id: str = item["track"]["artists"][0]["id"]
         track_id: str = item["track"]["id"]
 

@@ -32,7 +32,7 @@ OAUTH_ACCESS_TOKEN_URL: str = "https://accounts.spotify.com/api/token"
 CLIENT_KEY_B64: str = base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode()).decode()
 
 
-def fetch_spotify_data(ti) -> Any:
+def fetch_spotify_data(dag_date, ti) -> Any:
     options = Options()
     options.add_argument("--headless")
     options.add_argument("--window-size=1920x1080")
@@ -229,7 +229,10 @@ dag = DAG(
 )
 
 fetch_spotify_data = PythonOperator(
-    task_id="Fetch-Spotify-Data", python_callable=fetch_spotify_data, dag=dag
+    task_id="Fetch-Spotify-Data",
+    python_callable=fetch_spotify_data,
+    dag=dag,
+    op_kwargs={"dag_date": "{{ ds }}"},
 )
 
 upload_to_aws_rds = PythonOperator(

@@ -6,14 +6,14 @@ terraform {
       version = ">= 4.23.0"
       source  = "hashicorp/aws"
     }
-    local = {
-      version = ">= 2.2.3"
-      source  = "hashicorp/local"
-    }
-    tls = {
-      version = ">= 4.0.1"
-      source  = "hashicorp/tls"
-    }
+    # local = {
+    #   version = ">= 2.2.3"
+    #   source  = "hashicorp/local"
+    # }
+    # tls = {
+    #   version = ">= 4.0.1"
+    #   source  = "hashicorp/tls"
+    # }
   }
 }
 

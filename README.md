@@ -1,6 +1,6 @@
 # Spotify Airflow Batch Ingestion Project
 
-TLDR: Ingest data from spotify data using Apache Airflow as Orchestrator
+TLDR: Ingest data from Spotify's API(no SDK used) using Apache Airflow as Orchestrator
 
 If you listen to songs on Spotify, how would you like to know more about your listening traits or habits such as: 
 - what song do you listen to the most

@@ -21,3 +21,24 @@ This is what this project deals with, by ingesting data daily from Spotify's API
 ### Database ER Diagram
 
 ![](./assets/database_er.drawio.png)
+
+### Directory Tree
+assets (Images and draw.io diagrams)
+├── dags
+│   └── spotify
+│       ├── spotify-dag.py (file where dags are saved)
+├── docker-compose.yml (Docker Compose file to setup airflow)
+├── Dockerfile.airflow (Dockerfile for airflow)
+├── LICENSE
+├── logs (Airflow logs folder)
+├── Makefile
+├── notebooks
+│   ├── listens.csv
+│   ├── Testing API.ipynb
+│   └── Test Writer.ipynb
+├── plugins (Airflow plugins folder)
+├── README.md
+├── requirements.txt (Project dependency not present in the airflow docker image)
+├── sql_scripts (SQL scripts used)
+│   └── create_tables.sql
+└── terraform (terraform files)

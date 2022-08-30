@@ -1,5 +1,7 @@
 # Spotify Airflow Batch Ingestion Project
 
+#### Tools & Tech Stack: Python, Apache Airflow, Terraform, AWS
+
 TLDR: Ingest data from Spotify's API(no SDK used) using Apache Airflow as Orchestrator
 
 If you listen to songs on Spotify, how would you like to know more about your listening traits or habits such as: 
@@ -8,7 +10,7 @@ If you listen to songs on Spotify, how would you like to know more about your li
 - What are the audio characters of the songs you listen to
 - and possibly what kind of lyrics are contained in the songs you listen to.
 
-This is what this project deals with, by ingesting data daily from Spotify's API(no SDK used) and orchestrating the data pipeline with Apache Airflow. This Airflow server is to be deployed on AWS EC2.
+This is what this project deals with, by ingesting data daily from Spotify's API(no SDK used) and orchestrating the data pipeline with Apache Airflow. This Airflow server is to be deployed on AWS EC2, terraform is the IaaC tool used to setup our AWS resources.
 
 ## Architecture
 

@@ -1,4 +1,5 @@
 import base64
+import csv
 import os
 import urllib.parse
 from collections import OrderedDict, defaultdict
@@ -10,6 +11,7 @@ import pandas as pd
 import requests
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.utils.dates import days_ago
 from dateutil import parser
@@ -115,7 +117,7 @@ def fetch_spotify_data(dag_date, ti) -> Any:
     recently_played = [
         item
         for item in recently_played["items"]
-        if parser.parse(item["played_at"]) < dag_date
+        if parser.parse(item["played_at"]).replace(tzinfo=None) < dag_date
     ]
 
     listens: defaultdict = defaultdict(list)
@@ -189,6 +191,55 @@ def fetch_spotify_data(dag_date, ti) -> Any:
     print(listens_df)
 
 
+def write_to_disk(dag_date, dag_logical_date, ti):
+    print("Dag Date:", dag_date)
+    print("Dag Logical Date: ", dag_logical_date)
+    save_dir: str = "/home/airflow/spotify-data"
+    listens_dir: str = "listens"
+    artists_dir: str = "artists"
+    tracks_dir: str = "tracks"
+
+    listens = ti.xcom_pull(task_ids="Fetch-Spotify-Data", key="listens")
+    print("xcom pulling listens")
+    artists = ti.xcom_pull(task_ids="Fetch-Spotify-Data", key="artists")
+    print("xcom pulling artists")
+    tracks = ti.xcom_pull(task_ids="Fetch-Spotify-Data", key="tracks")
+    print("xcom pulling tracks")
+
+    for dir in (listens_dir, artists_dir, tracks_dir):
+        os.makedirs(os.path.join(save_dir, dir), exist_ok=True)
+
+    with open(
+        os.path.join(save_dir, listens_dir, f"{dag_date}.csv"), mode="w"
+    ) as listens_csv_file:
+        listens_csv_writer = csv.writer(listens_csv_file, delimiter=",")
+        for i, listen_values in enumerate(zip(*listens.values())):
+            if i == 0:
+                listens_csv_writer.writerow(listens.keys())
+            listens_csv_writer.writerow(listen_values)
+        print("listens csv file saved to Disk!")
+
+    with open(
+        os.path.join(save_dir, artists_dir, f"{dag_date}.csv"), mode="w"
+    ) as artists_csv_file:
+        artists_csv_writer = csv.writer(artists_csv_file, delimiter=",")
+        for i, artist_values in enumerate(zip(*artists.values())):
+            if i == 0:
+                artists_csv_writer.writerow(artists.keys())
+            artists_csv_writer.writerow(artist_values)
+        print("artists csv file saved to Disk!")
+
+    with open(
+        os.path.join(save_dir, tracks_dir, f"{dag_date}.csv"), mode="w"
+    ) as tracks_csv_file:
+        tracks_csv_writer = csv.writer(tracks_csv_file, delimiter=",")
+        for i, track_values in enumerate(zip(*tracks.values())):
+            if i == 0:
+                tracks_csv_writer.writerow(tracks.keys())
+            tracks_csv_writer.writerow(track_values)
+        print("tracks csv file saved to Disk!")
+
+
 def insert_to_aws_rds_postgres(ti):
     """Task to upload to AWS RDS Database"""
     postgres_hook = PostgresHook("aws_rds_postgres")
@@ -239,12 +290,27 @@ def insert_to_aws_rds_postgres(ti):
     conn.close()
 
 
+def upload_to_s3_data_lake(dag_date, bucket_name: str) -> None:
+    save_dir: str = "/home/airflow/spotify-data"
+    listens_dir: str = "listens"
+    artists_dir: str = "artists"
+    tracks_dir: str = "tracks"
+
+    hook = S3Hook("s3_conn")
+    for dir in (listens_dir, artists_dir, tracks_dir):
+        hook.load_file(
+            filename=os.path.join(save_dir, dir, f"{dag_date}.csv"),
+            key=f"{dir}/{dag_date}.csv",
+            bucket_name=bucket_name,
+        )
+
+
 default_args: Dict[str, str] = {"email": "awoyeletemiloluwa@gmail.com"}
 dag = DAG(
     dag_id="spotify-ingestion-dag",
     # schedule_interval="50 23 * * *", # 11:50 pm everyday
-    schedule_interval=None,
-    start_date=days_ago(5),
+    schedule_interval="@daily",
+    start_date=days_ago(2),
     default_args=default_args,
 )
 
@@ -255,10 +321,30 @@ fetch_spotify_data = PythonOperator(
     op_kwargs={"dag_date": "{{ ds }}"},
 )
 
+write_to_disk = PythonOperator(
+    task_id="write_to_disk",
+    python_callable=write_to_disk,
+    dag=dag,
+    op_kwargs={
+        "dag_date": "{{ ds }}",
+        "dag_logical_date": "{{ dag_run.logical_date }}",
+    },
+)
+
 upload_to_aws_rds = PythonOperator(
     task_id="Insert-to-AWS-RDS-Postgres",
     python_callable=insert_to_aws_rds_postgres,
     dag=dag,
 )
 
-fetch_spotify_data >> upload_to_aws_rds
+upload_to_s3_data_lake = PythonOperator(
+    task_id="upload_to_s3_data_lake",
+    python_callable=upload_to_s3_data_lake,
+    op_kwargs={
+        "dag_date": "{{ ds }}",
+        "bucket_name": "{{ var.value.get('s3_bucket') }}",
+    },
+)
+
+fetch_spotify_data >> [upload_to_aws_rds, write_to_disk]
+write_to_disk >> upload_to_s3_data_lake

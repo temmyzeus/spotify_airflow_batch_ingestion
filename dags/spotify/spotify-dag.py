@@ -305,6 +305,16 @@ fetch_spotify_data = PythonOperator(
     op_kwargs={"dag_date": "{{ ds }}"},
 )
 
+write_to_disk = PythonOperator(
+    task_id="write_to_disk",
+    python_callable=write_to_disk,
+    dag=dag,
+    op_kwargs={
+        "dag_date": "{{ ds }}",
+        "dag_logical_date": "{{ dag_run.logical_date }}",
+    },
+)
+
 upload_to_aws_rds = PythonOperator(
     task_id="Insert-to-AWS-RDS-Postgres",
     python_callable=insert_to_aws_rds_postgres,

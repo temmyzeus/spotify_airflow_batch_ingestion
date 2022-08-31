@@ -1,9 +1,8 @@
 import base64
 import os
-from traceback import print_tb
 import urllib.parse
 from collections import OrderedDict, defaultdict
-from datetime import datetime
+from datetime import datetime, time
 from typing import Any, Dict
 
 import airflow
@@ -13,6 +12,7 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.utils.dates import days_ago
+from dateutil import parser
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -33,7 +33,7 @@ OAUTH_ACCESS_TOKEN_URL: str = "https://accounts.spotify.com/api/token"
 CLIENT_KEY_B64: str = base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode()).decode()
 
 
-def fetch_spotify_data(ti) -> Any:
+def fetch_spotify_data(dag_date, ti) -> Any:
     options = Options()
     options.add_argument("--headless")
     options.add_argument("--window-size=1920x1080")
@@ -94,10 +94,29 @@ def fetch_spotify_data(ti) -> Any:
         ),
         "Content-Type": "application/json",
     }
+
+    dag_date = datetime.strptime(dag_date, "%Y-%m-%d")
+    dag_date_posix_seconds = int(dag_date.timestamp())
+    dag_date_posix_ms = int(dag_date_posix_seconds * 1000)
+
+    query_params = {"before": dag_date_posix_ms, "limit": 50}
+    query_params = urllib.parse.urlencode(query_params)
     recently_played_response = requests.get(
-        "https://api.spotify.com/v1/me/player/recently-played", headers=headers
+        f"https://api.spotify.com/v1/me/player/recently-played?{query_params}",
+        headers=headers,
     )
     recently_played = recently_played_response.json()
+
+    next_url = recently_played[
+        "next"
+    ]  # would only be useful when the songs retrieved are more than the limit i.e 50, so you check the next set if there are stll some items remaining for the same date
+
+    # all items where 'played_at' datetime falls into another schedule interval's start time should be removed
+    recently_played = [
+        item
+        for item in recently_played["items"]
+        if parser.parse(item["played_at"]) < dag_date
+    ]
 
     listens: defaultdict = defaultdict(list)
     artists: OrderedDict = OrderedDict(
@@ -123,7 +142,7 @@ def fetch_spotify_data(ti) -> Any:
         }
     )
 
-    for n, item in enumerate(recently_played["items"]):
+    for n, item in enumerate(recently_played):
         artist_id: str = item["track"]["artists"][0]["id"]
         track_id: str = item["track"]["id"]
 
@@ -230,7 +249,10 @@ dag = DAG(
 )
 
 fetch_spotify_data = PythonOperator(
-    task_id="Fetch-Spotify-Data", python_callable=fetch_spotify_data, dag=dag
+    task_id="Fetch-Spotify-Data",
+    python_callable=fetch_spotify_data,
+    dag=dag,
+    op_kwargs={"dag_date": "{{ ds }}"},
 )
 
 upload_to_aws_rds = PythonOperator(

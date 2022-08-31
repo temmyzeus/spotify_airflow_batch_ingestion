@@ -1,4 +1,5 @@
 import base64
+import csv
 import os
 import urllib.parse
 from collections import OrderedDict, defaultdict
@@ -187,6 +188,55 @@ def fetch_spotify_data(dag_date, ti) -> Any:
 
     listens_df = pd.DataFrame(listens)
     print(listens_df)
+
+
+def write_to_disk(dag_date, dag_logical_date, ti):
+    print("Dag Date:", dag_date)
+    print("Dag Logical Date: ", dag_logical_date)
+    save_dir: str = "/home/airflow/spotify-data"
+    listens_dir: str = "listens"
+    artists_dir: str = "artists"
+    tracks_dir: str = "tracks"
+
+    listens = ti.xcom_pull(task_ids="Fetch-Spotify-Data", key="listens")
+    print("xcom pulling listens")
+    artists = ti.xcom_pull(task_ids="Fetch-Spotify-Data", key="artists")
+    print("xcom pulling artists")
+    tracks = ti.xcom_pull(task_ids="Fetch-Spotify-Data", key="tracks")
+    print("xcom pulling tracks")
+
+    for dir in (listens_dir, artists_dir, tracks_dir):
+        os.makedirs(os.path.join(save_dir, dir), exist_ok=True)
+
+    with open(
+        os.path.join(save_dir, listens_dir, f"{dag_date}.csv"), mode="w"
+    ) as listens_csv_file:
+        listens_csv_writer = csv.writer(listens_csv_file, delimiter=",")
+        for i, listen_values in enumerate(zip(*listens.values())):
+            if i == 0:
+                listens_csv_writer.writerow(listens.keys())
+            listens_csv_writer.writerow(listen_values)
+        print("listens csv file saved to Disk!")
+
+    with open(
+        os.path.join(save_dir, artists_dir, f"{dag_date}.csv"), mode="w"
+    ) as artists_csv_file:
+        artists_csv_writer = csv.writer(artists_csv_file, delimiter=",")
+        for i, artist_values in enumerate(zip(*artists.values())):
+            if i == 0:
+                artists_csv_writer.writerow(artists.keys())
+            artists_csv_writer.writerow(artist_values)
+        print("artists csv file saved to Disk!")
+
+    with open(
+        os.path.join(save_dir, tracks_dir, f"{dag_date}.csv"), mode="w"
+    ) as tracks_csv_file:
+        tracks_csv_writer = csv.writer(tracks_csv_file, delimiter=",")
+        for i, track_values in enumerate(zip(*tracks.values())):
+            if i == 0:
+                tracks_csv_writer.writerow(tracks.keys())
+            tracks_csv_writer.writerow(track_values)
+        print("tracks csv file saved to Disk!")
 
 
 def insert_to_aws_rds_postgres(ti):

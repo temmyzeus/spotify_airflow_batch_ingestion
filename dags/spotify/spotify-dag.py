@@ -11,6 +11,7 @@ import pandas as pd
 import requests
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.utils.dates import days_ago
 from dateutil import parser
@@ -289,12 +290,27 @@ def insert_to_aws_rds_postgres(ti):
     conn.close()
 
 
+def upload_to_s3_data_lake(dag_date, bucket_name: str) -> None:
+    save_dir: str = "/home/airflow/spotify-data"
+    listens_dir: str = "listens"
+    artists_dir: str = "artists"
+    tracks_dir: str = "tracks"
+
+    hook = S3Hook("s3_conn")
+    for dir in (listens_dir, artists_dir, tracks_dir):
+        hook.load_file(
+            filename=os.path.join(save_dir, dir, f"{dag_date}.csv"),
+            key=f"{dir}/{dag_date}.csv",
+            bucket_name=bucket_name,
+        )
+
+
 default_args: Dict[str, str] = {"email": "awoyeletemiloluwa@gmail.com"}
 dag = DAG(
     dag_id="spotify-ingestion-dag",
     # schedule_interval="50 23 * * *", # 11:50 pm everyday
-    schedule_interval=None,
-    start_date=days_ago(5),
+    schedule_interval="@daily",
+    start_date=days_ago(2),
     default_args=default_args,
 )
 
@@ -321,4 +337,14 @@ upload_to_aws_rds = PythonOperator(
     dag=dag,
 )
 
-fetch_spotify_data >> upload_to_aws_rds
+upload_to_s3_data_lake = PythonOperator(
+    task_id="upload_to_s3_data_lake",
+    python_callable=upload_to_s3_data_lake,
+    op_kwargs={
+        "dag_date": "{{ ds }}",
+        "bucket_name": "{{ var.value.get('s3_bucket') }}",
+    },
+)
+
+fetch_spotify_data >> [upload_to_aws_rds, write_to_disk]
+write_to_disk >> upload_to_s3_data_lake

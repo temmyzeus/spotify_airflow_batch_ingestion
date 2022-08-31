@@ -115,7 +115,7 @@ def fetch_spotify_data(dag_date, ti) -> Any:
     recently_played = [
         item
         for item in recently_played["items"]
-        if parser.parse(item["played_at"]) < dag_date
+        if parser.parse(item["played_at"]).replace(tzinfo=None) < dag_date
     ]
 
     listens: defaultdict = defaultdict(list)

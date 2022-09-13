@@ -8,7 +8,7 @@ on:
 jobs:
   deploy:
     name: Deploy to EC2'
-    runs_on: ubuntu-latest
+    runs-on: ubuntu-latest
     # permissions: ...
     steps:
       - name: Checkout github repo

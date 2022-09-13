@@ -134,3 +134,6 @@ dmypy.json
 *.tfstate.*
 *.terraform
 *.plan
+
+# Configuration file
+*.conf

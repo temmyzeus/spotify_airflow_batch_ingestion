@@ -3,15 +3,18 @@ name: Deploy to Airflow Server
 on:
   push:
     branches:
-      - master
+      - dev
 
 jobs:
   deploy:
     name: Deploy to EC2'
     runs_on: ubuntu-latest
-    permissions: ...
+    # permissions: ...
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/configure-aws-credentials@v1
+      - name: Checkout github repo
+        uses: actions/checkout@v3
+      - name: Configure AWS Credentials
+        uses: actions/configure-aws-credentials@v1
+      - name: Deploy to EC2
         run: |
           echo "Deploying branch ${{ env.GITHUB_REF }}"

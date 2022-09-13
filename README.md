@@ -42,3 +42,12 @@ assets (Images and draw.io diagrams)
 ├── sql_scripts (SQL scripts used)
 │   └── create_tables.sql
 └── terraform (terraform files)
+
+
+## Terraform
+Ensure to create a **backend.conf** file if you choose to change the backend used, an example of the **backend.conf** is given below.
+```conf
+bucket  = "my-buket-name"
+key     = "my-key-name"
+region  = "my-region"
+```

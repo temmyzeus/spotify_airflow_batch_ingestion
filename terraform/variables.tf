@@ -31,14 +31,15 @@ variable "AIRFLOW_TAG" {
   type        = map(any)
   description = "Tag for Resources used by Airflow"
   default = {
-    Name = "Airflow_Instance"
-    App  = "Airflow"
+    Name = "SpotifyProject-Airflow"
+    App  = "Spotify Project Airflow"
   }
 }
 
 variable "AZ" {
   type        = string
   description = "Availability Zone(s)"
+  default     = "us-west-2a"
 }
 
 variable "public_key_path" {
@@ -54,4 +55,9 @@ variable "DATABASE_USERNAME" {
 variable "DATABASE_PASSWD" {
   type        = string
   description = "Password for database"
+}
+
+variable "ssh_key_file" {
+  type        = string
+  description = "Path to ssh key to setup aws key pair"
 }

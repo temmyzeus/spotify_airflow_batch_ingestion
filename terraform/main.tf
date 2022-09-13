@@ -1,31 +1,97 @@
-resource "aws_s3_bucket" "S3-Bucket" {
+resource "aws_s3_bucket" "bucket" {
   bucket = "${var.bucket_prefix}-${data.aws_caller_identity.account_details.account_id}"
   tags = {
     Project = "Spotify"
   }
 }
 
-# resource "aws_security_group" "airflow_security_group" {
-#   name = "airflow_security_group"
-#   description = "Allow TLS inbound traffic"
-# }
+resource "aws_vpc" "vpc" {
+  cidr_block           = "10.123.0.0/16"
+  enable_dns_hostnames = true
+  enable_dns_support   = true
 
-# resource "aws_instance" "airflow_instance" {
-#   ami               = "ami-0d70546e43a941d70" # Ubuntu 22.04
-#   instance_type     = "t2.medium"
-#   availability_zone = var.AZ
-#   tags              = var.AIRFLOW_TAG
-#   # security_groups = #create securty group and reference
-#   key_name = aws_key_pair.ec2_key_pair.id
-# ebs_block_device {
-#   device_name = "/dev/sdh"
-#   delete_on_termination = false
-#   encrypted             = false
-#   tags                  = var.AIRFLOW_TAG
-#   volume_size           = 8
-#   volume_type           = "gp2"
-# }
-# }
+  tags = {
+    "Name" = "spotify-project-airflow-vpc"
+  }
+}
+
+resource "aws_subnet" "subnet" {
+  vpc_id                  = aws_vpc.vpc.id
+  cidr_block              = "10.123.1.0/24"
+  map_public_ip_on_launch = true
+  availability_zone       = var.AZ
+  tags = {
+    "Name" = "spotify-project-airflow-subnet"
+  }
+}
+
+resource "aws_internet_gateway" "internet_gateway" {
+  vpc_id = aws_vpc.vpc.id
+  tags = {
+    "Name" = "spotify-project-airflow-ig"
+  }
+}
+
+resource "aws_route_table" "route_table" {
+  vpc_id = aws_vpc.vpc.id
+  tags = {
+    "Name" = "spotify-project-airflow-rt"
+  }
+}
+
+resource "aws_route" "default_route" {
+  route_table_id         = aws_route_table.route_table.id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = aws_internet_gateway.internet_gateway.id
+}
+
+resource "aws_route_table_association" "name" {
+  route_table_id = aws_route_table.route_table.id
+  subnet_id      = aws_subnet.subnet.id
+}
+
+resource "aws_security_group" "security_group" {
+  name        = "spotify-project-airflow-security-group"
+  description = "Allow TLS inbound traffic"
+}
+
+resource "aws_security_group" "sg" {
+  name        = "spotify-project-airflow-sg"
+  description = "Spotify Project Security Group"
+  vpc_id      = aws_vpc.vpc.id
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  # Add engress for port 8080, 7900, 5900, 4444 and others
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Access the open internet"
+  }
+  tags = {
+    "Name" = "spotify-project-security-group"
+  }
+}
+
+resource "aws_instance" "ec2_instance" {
+  ami                         = data.aws_ami.ec2_server_ami.id
+  instance_type               = "t2.medium"
+  availability_zone           = var.AZ
+  tags                        = var.AIRFLOW_TAG
+  key_name                    = aws_key_pair.ec2_key_pair.key_name
+  vpc_security_group_ids      = [aws_security_group.sg.id]
+  subnet_id                   = aws_subnet.subnet.id
+  user_data                   = file("setup-instance.tpl")
+  user_data_replace_on_change = true
+  root_block_device {
+    volume_size = 10
+  }
+}
 
 # resource "aws_ebs_volume" "airflow_instance_volume" {
 #   availability_zone = var.AZ
@@ -43,22 +109,11 @@ resource "aws_s3_bucket" "S3-Bucket" {
 #   ]
 # }
 
-# resource "tls_private_key" "airflow_ec2_key" {
-#   algorithm = "RSA"
-#   rsa_bits  = 2048
-# }
-
-# resource "local_sensitive_file" "rsa" {
-#   filename        = "../.ssh/rsa_key"
-#   content         = tls_private_key.airflow_ec2_key.private_key_pem
-#   file_permission = 0400
-# }
-
-# resource "aws_key_pair" "ec2_key_pair" {
-#   key_name   = "airflow_instance_key_pair"
-#   public_key = tls_private_key.airflow_ec2_key.public_key_openssh
-#   tags       = var.AIRFLOW_TAG
-# }
+resource "aws_key_pair" "ec2_key_pair" {
+  key_name   = "spotify-project-airflow-instance-key-pair"
+  public_key = file(var.ssh_key_file)
+  tags       = var.AIRFLOW_TAG
+}
 
 resource "aws_db_instance" "spotify_db" {
   engine                    = "postgres"
@@ -74,6 +129,9 @@ resource "aws_db_instance" "spotify_db" {
   max_allocated_storage     = 15
   skip_final_snapshot       = false
   final_snapshot_identifier = "spotify-db-snapshot"
+  depends_on = [
+    aws_key_pair.ec2_key_pair
+  ]
   tags = {
     Project : "Spotify"
   }

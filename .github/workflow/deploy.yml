@@ -3,7 +3,7 @@ name: Deploy to Airflow Server
 on:
   push:
     branches:
-    - master
+      - master
 
 jobs:
   deploy:
@@ -11,7 +11,7 @@ jobs:
     runs_on: ubuntu-latest
     permissions: ...
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/configure-aws-credentials@v1
-      run: |
-        echo "Deploying branch ${{ env.GITHUB_REF }}"
+      - uses: actions/checkout@v3
+      - uses: actions/configure-aws-credentials@v1
+        run: |
+          echo "Deploying branch ${{ env.GITHUB_REF }}"

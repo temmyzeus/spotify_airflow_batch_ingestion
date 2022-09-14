@@ -2,8 +2,9 @@ name: Deploy to Airflow Server
 
 on:
   push:
-    branches:
-      - dev
+    branches: [dev]
+  pull_request:
+    branches: [master]
 
 jobs:
   build:
@@ -51,5 +52,5 @@ jobs:
       - name: Deploy to EC2
         run: |
           echo AWS region is: ${{ secrets.AWS_REGION }}
-          echo "Deploying branch ${{ env.GITHUB_REF }}"
+          echo "Deploying ${{ github.ref }} branch in repository ${{ github.repository }} on ${{ github.event_name }}"
           aws deploy create-deployment

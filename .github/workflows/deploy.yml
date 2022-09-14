@@ -9,13 +9,17 @@ jobs:
   deploy:
     name: Deploy to EC2'
     runs-on: ubuntu-latest
-    # permissions: ...
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Checkout github repo
         uses: actions/checkout@v3
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
+          role-to-assume: ${{ secrets.ROLE_TO_ASSUME }}
+          role-session-name: Github-Action-Role
           aws-region: ${{ secrets.AWS_REGION }}
       - name: Deploy to EC2
         run: |

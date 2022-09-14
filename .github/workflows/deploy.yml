@@ -6,6 +6,23 @@ on:
       - dev
 
 jobs:
+  build:
+    name: Build Machine
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.ROLE_TO_ASSUME }}
+          role-session-name: Github-Action-Role
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Setup JDK 1.8
+        uses: actions/setup-java@v1
+        with:
+          java-verson: 1.8
+
   deploy:
     name: Deploy to EC2'
     runs-on: ubuntu-latest
@@ -25,3 +42,4 @@ jobs:
         run: |
           echo AWS region is: ${{ secrets.AWS_REGION }}
           echo "Deploying branch ${{ env.GITHUB_REF }}"
+          aws deploy create-deployment

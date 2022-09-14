@@ -25,9 +25,9 @@ jobs:
         run: |
           aws s3 ls
       - name: Setup JDK 1.8
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
-          java-verson: 1.8
+          java-version: 17
 
   deploy:
     name: Deploy to EC2'

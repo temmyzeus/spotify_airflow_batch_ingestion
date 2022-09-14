@@ -16,8 +16,8 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-region: ${{ AWS_REGION }}
+          aws-region: ${{ secrets.AWS_REGION }}
       - name: Deploy to EC2
         run: |
-          echo AWS region is: ${{ AWS_REGION }}
+          echo AWS region is: ${{ secrets.AWS_REGION }}
           echo "Deploying branch ${{ env.GITHUB_REF }}"

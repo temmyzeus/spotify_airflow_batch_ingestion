@@ -27,6 +27,8 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
+      - name: List Repo files
+        run: ls -al
 
   deploy:
     name: Deploy to EC2'
